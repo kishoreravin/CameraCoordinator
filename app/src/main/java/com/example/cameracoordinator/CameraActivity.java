@@ -44,7 +44,7 @@ public class CameraActivity extends AppCompatActivity {
     private TextView SizeTextView;
     FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
     DatabaseReference clickReference;
-    boolean captureFlag = true;
+
     ImageCaptureConfig imageCaptureConfig;
     ImageCapture imgCap;
 
@@ -59,26 +59,33 @@ public class CameraActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_camera);
 
         textureView = findViewById(R.id.view_finder);
-        Bundle bundle = getIntent().getExtras();
-        sideName = bundle.getString("SideName", "");
-        referalCode = bundle.getString("ReferalCode", "");
         SizeTextView = findViewById(R.id.size_tv);
+
+        Bundle bundle = getIntent().getExtras();
+        sideName = bundle.getString("SideName");
+        referalCode = bundle.getString("ReferalCode");
+
         clickReference = firebaseDatabase.getReference().child("referalCodes").child(referalCode);
 
+        //start camera if permission has been granted by user
         if (allPermissionsGranted()) {
-            startCamera(); //start camera if permission has been granted by user
+            startCamera();
         } else {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
         }
+
+
+        imageCaptureConfig = new ImageCaptureConfig.Builder().setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY)
+                .setTargetRotation(getWindowManager().getDefaultDisplay().getRotation()).build();
+        imgCap = new ImageCapture(imageCaptureConfig);
 
         clickReference.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 captureImage(imgCap);
-
             }
 
             @Override
@@ -95,7 +102,7 @@ public class CameraActivity extends AppCompatActivity {
         SizeDialogFragment sizeDialogFragment = new SizeDialogFragment();
         sizeDialogFragment.show(getSupportFragmentManager(), "Enter Size");
 
-        SizeTextView.setText(new StringBuilder().append(height).append(" x ").append(width).toString());
+        SizeTextView.setText(height+" X "+width);
 
         Rational aspectRatio = new Rational(textureView.getWidth(), textureView.getHeight());
         Size screen = new Size(width, height); //user entered size #Default => 250x250
@@ -118,10 +125,6 @@ public class CameraActivity extends AppCompatActivity {
                     }
                 });
 
-        imageCaptureConfig = new ImageCaptureConfig.Builder().setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY)
-                .setTargetRotation(getWindowManager().getDefaultDisplay().getRotation()).build();
-        imgCap = new ImageCapture(imageCaptureConfig);
-
 
         findViewById(R.id.imgCapture).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -138,29 +141,25 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     private void captureImage(ImageCapture imgCap) {
-        if (captureFlag) {
+        File file = new File(Environment.getExternalStorageDirectory() + "/" + "ImageData" + "/" + sideName + "_" + System.currentTimeMillis() + ".png");
+        imgCap.takePicture(file, new ImageCapture.OnImageSavedListener() {
+            @Override
+            public void onImageSaved(@NonNull File file) {
+                String msg = "Pic captured at " + file.getAbsolutePath();
+                Toast.makeText(getBaseContext(), msg, Toast.LENGTH_LONG).show();
+            }
 
-            File file = new File(Environment.getExternalStorageDirectory() + "/" + "ImageData" + "/" + sideName + "_" + System.currentTimeMillis() + ".png");
-            imgCap.takePicture(file, new ImageCapture.OnImageSavedListener() {
-                @Override
-                public void onImageSaved(@NonNull File file) {
-                    String msg = "Pic captured at " + file.getAbsolutePath();
-                    Toast.makeText(getBaseContext(), msg, Toast.LENGTH_LONG).show();
-                    captureFlag = true;
+            @Override
+            public void onError(@NonNull ImageCapture.UseCaseError useCaseError, @NonNull String message, @Nullable Throwable cause) {
+                String msg = "Pic capture failed : " + message;
+                Toast.makeText(getBaseContext(), msg, Toast.LENGTH_LONG).show();
+                if (cause != null) {
+                    cause.printStackTrace();
                 }
-
-                @Override
-                public void onError(@NonNull ImageCapture.UseCaseError useCaseError, @NonNull String message, @Nullable Throwable cause) {
-                    String msg = "Pic capture failed : " + message;
-                    Toast.makeText(getBaseContext(), msg, Toast.LENGTH_LONG).show();
-                    if (cause != null) {
-                        cause.printStackTrace();
-                    }
-                }
-            });
-        }
-
+            }
+        });
     }
+
 
     private void updateTransform() {
         Matrix mx = new Matrix();

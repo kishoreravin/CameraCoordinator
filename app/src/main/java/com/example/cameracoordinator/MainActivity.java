@@ -9,6 +9,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.cameracoordinator.util.CreateReferalCode;
 import com.google.firebase.database.DatabaseReference;
@@ -32,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
 
         GetReferalCode = findViewById(R.id.get_referal_code);
         ReferalCode = findViewById(R.id.referal_code_tv);
-        StartCamera = findViewById(R.id.start_camera);
+        StartCamera = findViewById(R.id.start_camera_button);
         SideName = findViewById(R.id.side_et);
         EnteredReferalCode = findViewById(R.id.entered_ref_code);
         GoButton = findViewById(R.id.go_button);
@@ -41,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 referalCode = CreateReferalCode.getReferalCode();
+                Toast.makeText(getApplicationContext(),referalCode,Toast.LENGTH_SHORT).show();
                 ReferalCode.setText(referalCode);
             }
         });
