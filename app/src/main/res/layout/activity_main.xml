@@ -9,20 +9,24 @@
     tools:context=".MainActivity">
 
     <Button
-        android:id="@+id/start_syncying"
+        android:id="@+id/get_referal_code"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
         android:text="Get Referal Code"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintHorizontal_bias="0.426"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.221" />
+        app:layout_constraintVertical_bias="0.416" />
 
     <TextView
-        android:id="@+id/referal_code"
-        android:layout_width="246dp"
+        android:id="@+id/referal_code_tv"
+        android:layout_width="205dp"
         android:layout_height="46dp"
+        android:layout_marginTop="16dp"
         android:backgroundTint="#ECD612"
         android:ellipsize="marquee"
         android:fadingEdge="horizontal|vertical"
@@ -32,41 +36,87 @@
         android:textIsSelectable="true"
         android:textSize="20sp"
         android:textStyle="bold|italic"
+        app:layout_constraintTop_toBottomOf="@+id/get_referal_code"
         tools:ignore="MissingConstraints"
-        tools:layout_editor_absoluteX="82dp"
-        tools:layout_editor_absoluteY="225dp"
+        tools:layout_editor_absoluteX="85dp"
         tools:text="Referal Code" />
 
     <Button
-        android:id="@+id/button"
+        android:id="@+id/start_camera_button"
         android:layout_width="135dp"
         android:layout_height="59dp"
         android:text="Start Camera"
-        tools:layout_editor_absoluteX="140dp"
-        tools:layout_editor_absoluteY="454dp"
-        tools:ignore="MissingConstraints" />
+        tools:ignore="MissingConstraints"
+        tools:layout_editor_absoluteX="138dp"
+        tools:layout_editor_absoluteY="585dp" />
 
 
     <TextView
         android:id="@+id/textView"
         android:layout_width="wrap_content"
-        android:layout_height="15dp"
+        android:layout_height="0dp"
         android:text="Enter Side"
-        tools:layout_editor_absoluteX="85dp"
-        tools:layout_editor_absoluteY="342dp"
         tools:ignore="MissingConstraints"
-        />
+        tools:layout_editor_absoluteX="85dp"
+        tools:layout_editor_absoluteY="103dp" />
 
     <EditText
         android:id="@+id/side_et"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:ems="10"
+        android:hint="Eg: front,back,left.."
         android:inputType="textPersonName"
-        tools:layout_editor_absoluteX="82dp"
-        tools:layout_editor_absoluteY="366dp"
         tools:ignore="MissingConstraints"
-        android:hint="Eg: front,back,left.."/>
+        tools:layout_editor_absoluteX="85dp"
+        tools:layout_editor_absoluteY="130dp" />
+
+    <View
+        android:id="@+id/divider"
+        android:layout_width="395dp"
+        android:layout_height="3dp"
+        android:background="?android:attr/listDivider"
+        tools:ignore="MissingConstraints"
+        tools:layout_editor_absoluteX="8dp"
+        tools:layout_editor_absoluteY="225dp" />
+
+    <View
+        android:id="@+id/divider2"
+        android:layout_width="395dp"
+        android:layout_height="3dp"
+        android:background="?android:attr/listDivider"
+        tools:ignore="MissingConstraints"
+        tools:layout_editor_absoluteX="8dp"
+        tools:layout_editor_absoluteY="443dp" />
+
+    <EditText
+        android:id="@+id/entered_ref_code"
+        android:layout_width="208dp"
+        android:layout_height="43dp"
+        android:ems="10"
+        android:hint="Referal Code"
+        android:inputType="textPersonName"
+        tools:ignore="MissingConstraints"
+        tools:layout_editor_absoluteX="85dp"
+        tools:layout_editor_absoluteY="527dp" />
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="131dp"
+        android:layout_height="23dp"
+        android:text="Enter Referal Code"
+        tools:ignore="MissingConstraints"
+        tools:layout_editor_absoluteX="85dp"
+        tools:layout_editor_absoluteY="496dp" />
+
+    <ImageButton
+        android:id="@+id/go_button"
+        android:layout_width="60dp"
+        android:layout_height="45dp"
+        app:srcCompat="@android:drawable/ic_menu_send"
+        tools:layout_editor_absoluteX="293dp"
+        tools:layout_editor_absoluteY="351dp"
+        tools:ignore="MissingConstraints" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

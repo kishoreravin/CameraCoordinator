@@ -10,6 +10,7 @@ import androidx.camera.core.Preview;
 import androidx.camera.core.PreviewConfig;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.DialogFragment;
 import androidx.lifecycle.LifecycleOwner;
 
 import android.content.pm.PackageManager;
@@ -22,21 +23,38 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.io.File;
+import java.util.HashMap;
 
 public class CameraActivity extends AppCompatActivity {
 
     private int REQUEST_CODE_PERMISSIONS = 101;
     private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA", "android.permission.WRITE_EXTERNAL_STORAGE"};
     TextureView textureView;
-    private String sideName;
+    private String sideName, referalCode;
+    private TextView SizeTextView;
     FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
-    DatabaseReference clickReference = firebaseDatabase.getReference().child("");
+    DatabaseReference clickReference;
+    boolean captureFlag = true;
+    ImageCaptureConfig imageCaptureConfig;
+    ImageCapture imgCap;
+
+
+    int height, width = 250;
+
+    public void setSize(int height, int width) {
+        this.height = height;
+        this.width = width;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,21 +63,42 @@ public class CameraActivity extends AppCompatActivity {
 
         textureView = findViewById(R.id.view_finder);
         Bundle bundle = getIntent().getExtras();
-        sideName = bundle.getString("SideName");
+        sideName = bundle.getString("SideName", "");
+        referalCode = bundle.getString("ReferalCode", "");
+        SizeTextView = findViewById(R.id.size_tv);
+        clickReference = firebaseDatabase.getReference().child("referalCodes").child(referalCode);
 
-        if(allPermissionsGranted()){
+        if (allPermissionsGranted()) {
             startCamera(); //start camera if permission has been granted by user
-        } else{
+        } else {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
         }
+
+        clickReference.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                captureImage(imgCap);
+
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
     }
 
     private void startCamera() {
 
         CameraX.unbindAll();
 
-        Rational aspectRatio = new Rational (textureView.getWidth(), textureView.getHeight());
-        Size screen = new Size(textureView.getWidth(), textureView.getHeight()); //size of the screen
+        SizeDialogFragment sizeDialogFragment = new SizeDialogFragment();
+        sizeDialogFragment.show(getSupportFragmentManager(), "Enter Size");
+
+        SizeTextView.setText(new StringBuilder().append(height).append(" x ").append(width).toString());
+
+        Rational aspectRatio = new Rational(textureView.getWidth(), textureView.getHeight());
+        Size screen = new Size(width, height); //user entered size #Default => 250x250
 
 
         PreviewConfig pConfig = new PreviewConfig.Builder().setTargetAspectRatio(aspectRatio).setTargetResolution(screen).build();
@@ -69,7 +108,7 @@ public class CameraActivity extends AppCompatActivity {
                 new Preview.OnPreviewOutputUpdateListener() {
                     //to update the surface texture we  have to destroy it first then re-add it
                     @Override
-                    public void onUpdated(Preview.PreviewOutput output){
+                    public void onUpdated(Preview.PreviewOutput output) {
                         ViewGroup parent = (ViewGroup) textureView.getParent();
                         parent.removeView(textureView);
                         parent.addView(textureView, 0);
@@ -79,39 +118,51 @@ public class CameraActivity extends AppCompatActivity {
                     }
                 });
 
-
-        ImageCaptureConfig imageCaptureConfig = new ImageCaptureConfig.Builder().setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY)
+        imageCaptureConfig = new ImageCaptureConfig.Builder().setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY)
                 .setTargetRotation(getWindowManager().getDefaultDisplay().getRotation()).build();
-        final ImageCapture imgCap = new ImageCapture(imageCaptureConfig);
+        imgCap = new ImageCapture(imageCaptureConfig);
+
 
         findViewById(R.id.imgCapture).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                File file = new File(Environment.getExternalStorageDirectory() + "/" + sideName+ "_" + System.currentTimeMillis() + ".png");
-                imgCap.takePicture(file, new ImageCapture.OnImageSavedListener() {
-                    @Override
-                    public void onImageSaved(@NonNull File file) {
-                        String msg = "Pic captured at " + file.getAbsolutePath();
-                        Toast.makeText(getBaseContext(), msg,Toast.LENGTH_LONG).show();
-                    }
-
-                    @Override
-                    public void onError(@NonNull ImageCapture.UseCaseError useCaseError, @NonNull String message, @Nullable Throwable cause) {
-                        String msg = "Pic capture failed : " + message;
-                        Toast.makeText(getBaseContext(), msg,Toast.LENGTH_LONG).show();
-                        if(cause != null){
-                            cause.printStackTrace();
-                        }
-                    }
-                });
+                Click click = new Click();
+                click.setClick("" + System.currentTimeMillis());
+                clickReference.setValue(click);
             }
         });
 
+
         //bind to lifecycle:
-        CameraX.bindToLifecycle((LifecycleOwner)this, preview, imgCap);
+        CameraX.bindToLifecycle((LifecycleOwner) this, preview, imgCap);
     }
 
-    private void updateTransform(){
+    private void captureImage(ImageCapture imgCap) {
+        if (captureFlag) {
+
+            File file = new File(Environment.getExternalStorageDirectory() + "/" + "ImageData" + "/" + sideName + "_" + System.currentTimeMillis() + ".png");
+            imgCap.takePicture(file, new ImageCapture.OnImageSavedListener() {
+                @Override
+                public void onImageSaved(@NonNull File file) {
+                    String msg = "Pic captured at " + file.getAbsolutePath();
+                    Toast.makeText(getBaseContext(), msg, Toast.LENGTH_LONG).show();
+                    captureFlag = true;
+                }
+
+                @Override
+                public void onError(@NonNull ImageCapture.UseCaseError useCaseError, @NonNull String message, @Nullable Throwable cause) {
+                    String msg = "Pic capture failed : " + message;
+                    Toast.makeText(getBaseContext(), msg, Toast.LENGTH_LONG).show();
+                    if (cause != null) {
+                        cause.printStackTrace();
+                    }
+                }
+            });
+        }
+
+    }
+
+    private void updateTransform() {
         Matrix mx = new Matrix();
         float w = textureView.getMeasuredWidth();
         float h = textureView.getMeasuredHeight();
@@ -120,9 +171,9 @@ public class CameraActivity extends AppCompatActivity {
         float cY = h / 2f;
 
         int rotationDgr;
-        int rotation = (int)textureView.getRotation();
+        int rotation = (int) textureView.getRotation();
 
-        switch(rotation){
+        switch (rotation) {
             case Surface.ROTATION_0:
                 rotationDgr = 0;
                 break;
@@ -139,27 +190,27 @@ public class CameraActivity extends AppCompatActivity {
                 return;
         }
 
-        mx.postRotate((float)rotationDgr, cX, cY);
+        mx.postRotate((float) rotationDgr, cX, cY);
         textureView.setTransform(mx);
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 
-        if(requestCode == REQUEST_CODE_PERMISSIONS){
-            if(allPermissionsGranted()){
+        if (requestCode == REQUEST_CODE_PERMISSIONS) {
+            if (allPermissionsGranted()) {
                 startCamera();
-            } else{
+            } else {
                 Toast.makeText(this, "Permissions not granted by the user.", Toast.LENGTH_SHORT).show();
                 finish();
             }
         }
     }
 
-    private boolean allPermissionsGranted(){
+    private boolean allPermissionsGranted() {
 
-        for(String permission : REQUIRED_PERMISSIONS){
-            if(ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED){
+        for (String permission : REQUIRED_PERMISSIONS) {
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
                 return false;
             }
         }
