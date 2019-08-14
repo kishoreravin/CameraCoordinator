@@ -3,7 +3,9 @@ package com.example.cameracoordinator;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Environment;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
@@ -16,6 +18,8 @@ import com.example.cameracoordinator.util.CreateReferalCode;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
+import java.io.File;
+
 public class MainActivity extends AppCompatActivity {
 
     private Button GetReferalCode, StartCamera;
@@ -26,10 +30,18 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton GoButton;
 
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        File AppDirectory = new File(Environment.getDataDirectory(),"ImageData");
+        if(!AppDirectory.exists())
+        {
+            AppDirectory.mkdir();
+        }
+
 
         GetReferalCode = findViewById(R.id.get_referal_code);
         ReferalCode = findViewById(R.id.referal_code_tv);

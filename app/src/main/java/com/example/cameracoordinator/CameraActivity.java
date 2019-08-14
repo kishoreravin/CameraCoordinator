@@ -125,7 +125,7 @@ public class CameraActivity extends AppCompatActivity {
                 });
 
 
-        imageCaptureConfig = new ImageCaptureConfig.Builder().setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY)
+        imageCaptureConfig = new ImageCaptureConfig.Builder().setCaptureMode(ImageCapture.CaptureMode.MAX_QUALITY).setTargetResolution(new Size(1200, 1600))
                 .setTargetRotation(getWindowManager().getDefaultDisplay().getRotation()).build();
         imgCap = new ImageCapture(imageCaptureConfig);
 
@@ -199,7 +199,7 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     public void captureImage() {
-        File file = new File(Environment.getExternalStorageDirectory() + "/" + "ImageData" + "/" + sideName + "_" + System.currentTimeMillis() + ".png");
+        File file = new File(getFilesDir() + "/" + "ImageData" + "/" + sideName + "_" + System.currentTimeMillis() + ".png");
         imgCap.takePicture(file, new ImageCapture.OnImageSavedListener() {
             @Override
             public void onImageSaved(@NonNull File file) {
