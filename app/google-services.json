@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "854070413015-7j6oarl9anv1bk18m2oqosigv3fdlvsv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.cameracoordinator",
+            "certificate_hash": "74b777f0373bfac3c23054afc70e7162d7cce447"
+          }
+        },
+        {
           "client_id": "854070413015-t2qnn22anl30mjdfng00n3bi4bs2iq8u.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

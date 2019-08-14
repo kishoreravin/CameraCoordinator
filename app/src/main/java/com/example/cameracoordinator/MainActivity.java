@@ -57,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
                     intent.putExtra("SideName", sideName);
                     intent.putExtra("ReferalCode", referalCode);
                     startActivity(intent);
+
                 } else {
 
                     if ((sideName == null)) {

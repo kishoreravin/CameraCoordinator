@@ -18,9 +18,6 @@ public class SizeDialogFragment extends DialogFragment {
     public void onStart() {
         super.onStart();
         Dialog d = getDialog();
-        if (d != null) {
-            d.getWindow().setLayout(900, 750);
-        }
         assert d != null;
         d.setCanceledOnTouchOutside(true);
     }

@@ -17,6 +17,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Matrix;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.Log;
 import android.util.Rational;
 import android.util.Size;
 import android.view.Surface;
@@ -26,14 +27,22 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.util.HashMap;
+import java.util.Map;
 
 public class CameraActivity extends AppCompatActivity {
 
@@ -42,8 +51,18 @@ public class CameraActivity extends AppCompatActivity {
     TextureView textureView;
     private String sideName, referalCode;
     private TextView SizeTextView;
-    FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
-    DatabaseReference clickReference;
+
+    final private String FCM_API = "https://fcm.googleapis.com/fcm/send";
+    final private String serverKey = "key=" + "AAAAxtqQRtc:APA91bG77vKYy-e15slE2x6yMHZIKkml8XMLnC3ecHmHQlOTUKRPS4CzMVg8m7gFsLJmK4yDUzgFKS2a8TA2hkfyydT5o1ob9g_OYMKMdOGfCt1DBwgVirwkyaHRlThCEs3_xO_YoGno";
+    final private String contentType = "application/json";
+    final String TAG = "NOTIFICATION TAG";
+
+    String NOTIFICATION_TITLE = "Camera Clicked";
+    String NOTIFICATION_MESSAGE = "Image Saved";
+    String TOPIC;
+
+//    FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
+//    DatabaseReference clickReference;
 
     ImageCaptureConfig imageCaptureConfig;
     ImageCapture imgCap;
@@ -68,7 +87,6 @@ public class CameraActivity extends AppCompatActivity {
         sideName = bundle.getString("SideName");
         referalCode = bundle.getString("ReferalCode");
 
-        clickReference = firebaseDatabase.getReference().child("referalCodes").child(referalCode);
 
         //start camera if permission has been granted by user
         if (allPermissionsGranted()) {
@@ -82,17 +100,7 @@ public class CameraActivity extends AppCompatActivity {
                 .setTargetRotation(getWindowManager().getDefaultDisplay().getRotation()).build();
         imgCap = new ImageCapture(imageCaptureConfig);
 
-        clickReference.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                captureImage(imgCap);
-            }
 
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
-
-            }
-        });
     }
 
     private void startCamera() {
@@ -129,10 +137,24 @@ public class CameraActivity extends AppCompatActivity {
         findViewById(R.id.imgCapture).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Click click = new Click();
-                click.setClick("" + System.currentTimeMillis());
-                clickReference.setValue(click);
+
+                TOPIC = referalCode; //topic has to match what the receiver subscribed to
+
+
+                JSONObject notification = new JSONObject();
+                JSONObject notifcationBody = new JSONObject();
+                try {
+                    notifcationBody.put("title", NOTIFICATION_TITLE);
+                    notifcationBody.put("message", NOTIFICATION_MESSAGE);
+
+                    notification.put("to", TOPIC);
+                    notification.put("data", notifcationBody);
+                } catch (JSONException e) {
+                    Log.e(TAG, "onCreate: " + e.getMessage() );
+                }
+                sendNotification(notification);
             }
+
         });
 
 
@@ -214,6 +236,33 @@ public class CameraActivity extends AppCompatActivity {
             }
         }
         return true;
+    }
+
+    private void sendNotification(JSONObject notification) {
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(FCM_API, notification,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.i(TAG, "onResponse: " + response.toString());
+
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(getBaseContext(), "Request error", Toast.LENGTH_LONG).show();
+                        Log.i(TAG, "onErrorResponse: Didn't work");
+                    }
+                }){
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> params = new HashMap<>();
+                params.put("Authorization", serverKey);
+                params.put("Content-Type", contentType);
+                return params;
+            }
+        };
+        MySingleton.getInstance(getApplicationContext()).addToRequestQueue(jsonObjectRequest);
     }
 }
 
