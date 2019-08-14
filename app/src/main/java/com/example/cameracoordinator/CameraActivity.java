@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -16,25 +17,25 @@ import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
-import com.android.volley.AuthFailureError;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonObjectRequest;
+
 import com.camerakit.CameraKitView;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.messaging.FirebaseMessaging;
+
 import org.json.JSONException;
 import org.json.JSONObject;
+
 import java.io.File;
 import java.io.FileOutputStream;
-import java.util.HashMap;
-import java.util.Map;
+
+import okhttp3.ResponseBody;
+import retrofit2.Callback;
 
 public class CameraActivity extends AppCompatActivity {
 
     private int REQUEST_CODE_PERMISSIONS = 101;
-    private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA", "android.permission.WRITE_EXTERNAL_STORAGE","android.permission.READ_EXTERNAL_STORAGE"};
+    private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA", "android.permission.WRITE_EXTERNAL_STORAGE", "android.permission.READ_EXTERNAL_STORAGE"};
     private CameraKitView cameraKitView;
     private String sideName, referalCode;
     private TextView SizeTextView;
@@ -47,10 +48,10 @@ public class CameraActivity extends AppCompatActivity {
     String NOTIFICATION_TITLE = "Camera Clicked";
     String NOTIFICATION_MESSAGE = "Image Saved";
     String TOPIC;
+    String token;
 
 //    FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
 //    DatabaseReference clickReference;
-
 
 
     int height, width = 250;
@@ -64,9 +65,10 @@ public class CameraActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             boolean rec = intent.getBooleanExtra("received", true);
+            token = intent.getStringExtra("token");
             if (rec) {
                 captureImage();
-                Toast.makeText(getApplicationContext(),"BroadcastReceived",Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "BroadcastReceived", Toast.LENGTH_SHORT).show();
             }
         }
     };
@@ -118,21 +120,7 @@ public class CameraActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
 
-                TOPIC = referalCode; //topic has to match what the receiver subscribed to
-
-
-                JSONObject notification = new JSONObject();
-                JSONObject notifcationBody = new JSONObject();
-                try {
-                    notifcationBody.put("title", NOTIFICATION_TITLE);
-                    notifcationBody.put("message", NOTIFICATION_MESSAGE);
-
-                    notification.put("to", "topics/" + TOPIC);
-                    notification.put("data", notifcationBody);
-                } catch (JSONException e) {
-                    Log.e(TAG, "onCreate: " + e.getMessage());
-                }
-                sendNotification(notification);
+                sendNotification();
             }
 
         });
@@ -140,7 +128,7 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     public void captureImage() {
-        final File savedPhoto = new File(Environment.getExternalStorageDirectory()+"/"+"ImageData" , sideName + "_" + System.currentTimeMillis() + ".png");
+        final File savedPhoto = new File(Environment.getExternalStorageDirectory() + "/" + "ImageData", sideName + "_" + System.currentTimeMillis() + ".png");
 
         cameraKitView.captureImage(new CameraKitView.ImageCallback() {
             @Override
@@ -149,14 +137,13 @@ public class CameraActivity extends AppCompatActivity {
                     FileOutputStream outputStream = new FileOutputStream(savedPhoto.getPath());
                     outputStream.write(capturedImage);
                     outputStream.close();
-                    Toast.makeText(getApplicationContext(),"Image save to Imagedata directory",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "Image save to Imagedata directory", Toast.LENGTH_SHORT).show();
                 } catch (java.io.IOException e) {
                     e.printStackTrace();
                 }
             }
         });
     }
-
 
 
     @Override
@@ -182,31 +169,29 @@ public class CameraActivity extends AppCompatActivity {
         return true;
     }
 
-    private void sendNotification(JSONObject notification) {
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(FCM_API, notification,
-                new Response.Listener<JSONObject>() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        Log.i(TAG, "onResponse: " + response.toString());
+    private void sendNotification() {
 
-                    }
-                },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(getBaseContext(), "Request error", Toast.LENGTH_LONG).show();
-                        Log.i(TAG, "onErrorResponse: Didn't work");
-                    }
-                }) {
+        SendNotificationModel sendNotificationModel = new SendNotificationModel("Image Click Request", "Camera Coordinator", referalCode);
+        RequestNotification requestNotificaton = new RequestNotification();
+        requestNotificaton.setSendNotificationModel(sendNotificationModel);
+        //token is id , whom you want to send notification ,
+        requestNotificaton.setToken(token);
+
+        ApiInterface apiService = BaseApiHelper.getClient().create(ApiInterface.class);
+        retrofit2.Call<ResponseBody> responseBodyCall = apiService.sendChatNotification(requestNotificaton);
+
+        responseBodyCall.enqueue(new Callback<ResponseBody>() {
             @Override
-            public Map<String, String> getHeaders() throws AuthFailureError {
-                Map<String, String> params = new HashMap<>();
-                params.put("Authorization", serverKey);
-                params.put("Content-Type", contentType);
-                return params;
+            public void onResponse(retrofit2.Call<ResponseBody> call, retrofit2.Response<ResponseBody> response) {
+                Log.d("FCM", response.body().toString());
             }
-        };
-        MySingleton.getInstance(getApplicationContext()).addToRequestQueue(jsonObjectRequest);
+
+            @Override
+            public void onFailure(retrofit2.Call<ResponseBody> call, Throwable t) {
+
+            }
+        });
+
     }
 
     @Override

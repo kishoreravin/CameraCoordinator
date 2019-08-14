@@ -26,7 +26,7 @@ public class FireBaseMessagingService extends FirebaseMessagingService {
 
     private final String ADMIN_CHANNEL_ID = "admin_channel";
 
-    static String referalCode;
+    static String token;
 
 
     @Override
@@ -69,6 +69,7 @@ public class FireBaseMessagingService extends FirebaseMessagingService {
         Intent intent1 = new Intent();
         intent1.setAction("com.example.cameracoordinator");
         intent1.putExtra("received",true);
+        intent1.putExtra("token",token);
         sendBroadcast(intent1);
 
     }
@@ -91,7 +92,7 @@ public class FireBaseMessagingService extends FirebaseMessagingService {
 
     @Override
     public void onNewToken(String s) {
-
+        token = s;
         super.onNewToken(s);
     }
 }
