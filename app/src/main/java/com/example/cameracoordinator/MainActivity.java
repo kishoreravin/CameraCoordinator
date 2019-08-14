@@ -36,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        File AppDirectory = new File(Environment.getDataDirectory(),"ImageData");
+        File AppDirectory = new File(Environment.getExternalStorageDirectory(),"ImageData");
         if(!AppDirectory.exists())
         {
             AppDirectory.mkdir();

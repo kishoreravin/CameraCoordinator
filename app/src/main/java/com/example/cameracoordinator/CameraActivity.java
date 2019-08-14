@@ -1,62 +1,41 @@
 package com.example.cameracoordinator;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.core.CameraX;
-import androidx.camera.core.ImageCapture;
-import androidx.camera.core.ImageCaptureConfig;
-import androidx.camera.core.Preview;
-import androidx.camera.core.PreviewConfig;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.fragment.app.DialogFragment;
-import androidx.lifecycle.LifecycleOwner;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.graphics.Matrix;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.StrictMode;
 import android.util.Log;
-import android.util.Rational;
-import android.util.Size;
-import android.view.Surface;
-import android.view.TextureView;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import com.android.volley.AuthFailureError;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
+import com.camerakit.CameraKitView;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.messaging.FirebaseMessaging;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.io.File;
+import java.io.FileOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
 public class CameraActivity extends AppCompatActivity {
 
     private int REQUEST_CODE_PERMISSIONS = 101;
-    private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA", "android.permission.WRITE_EXTERNAL_STORAGE"};
-    TextureView textureView;
+    private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA", "android.permission.WRITE_EXTERNAL_STORAGE","android.permission.READ_EXTERNAL_STORAGE"};
+    private CameraKitView cameraKitView;
     private String sideName, referalCode;
     private TextView SizeTextView;
 
@@ -72,8 +51,6 @@ public class CameraActivity extends AppCompatActivity {
 //    FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
 //    DatabaseReference clickReference;
 
-    ImageCaptureConfig imageCaptureConfig;
-    ImageCapture imgCap;
 
 
     int height, width = 250;
@@ -89,6 +66,7 @@ public class CameraActivity extends AppCompatActivity {
             boolean rec = intent.getBooleanExtra("received", true);
             if (rec) {
                 captureImage();
+                Toast.makeText(getApplicationContext(),"BroadcastReceived",Toast.LENGTH_SHORT).show();
             }
         }
     };
@@ -103,7 +81,7 @@ public class CameraActivity extends AppCompatActivity {
             StrictMode.setThreadPolicy(policy);
         }
 
-        textureView = findViewById(R.id.view_finder);
+        cameraKitView = findViewById(R.id.camera);
         SizeTextView = findViewById(R.id.size_tv);
 
         Bundle bundle = getIntent().getExtras();
@@ -124,11 +102,6 @@ public class CameraActivity extends AppCompatActivity {
                     }
                 });
 
-
-        imageCaptureConfig = new ImageCaptureConfig.Builder().setCaptureMode(ImageCapture.CaptureMode.MAX_QUALITY).setTargetResolution(new Size(1200, 1600))
-                .setTargetRotation(getWindowManager().getDefaultDisplay().getRotation()).build();
-        imgCap = new ImageCapture(imageCaptureConfig);
-
         //start camera if permission has been granted by user
         if (allPermissionsGranted()) {
             startCamera();
@@ -140,35 +113,6 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     private void startCamera() {
-
-        CameraX.unbindAll();
-
-        SizeDialogFragment sizeDialogFragment = new SizeDialogFragment();
-        sizeDialogFragment.show(getSupportFragmentManager(), "Enter Size");
-
-        SizeTextView.setText(height + " X " + width);
-
-        Rational aspectRatio = new Rational(textureView.getWidth(), textureView.getHeight());
-        Size screen = new Size(width, height); //user entered size #Default => 250x250
-
-
-        PreviewConfig pConfig = new PreviewConfig.Builder().setTargetAspectRatio(aspectRatio).setTargetResolution(screen).build();
-        Preview preview = new Preview(pConfig);
-
-        preview.setOnPreviewOutputUpdateListener(
-                new Preview.OnPreviewOutputUpdateListener() {
-                    //to update the surface texture we  have to destroy it first then re-add it
-                    @Override
-                    public void onUpdated(Preview.PreviewOutput output) {
-                        ViewGroup parent = (ViewGroup) textureView.getParent();
-                        parent.removeView(textureView);
-                        parent.addView(textureView, 0);
-
-                        textureView.setSurfaceTexture(output.getSurfaceTexture());
-                        updateTransform();
-                    }
-                });
-
 
         findViewById(R.id.imgCapture).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -193,63 +137,27 @@ public class CameraActivity extends AppCompatActivity {
 
         });
 
-
-        //bind to lifecycle:
-        CameraX.bindToLifecycle((LifecycleOwner) this, preview, imgCap);
     }
 
     public void captureImage() {
-        File file = new File(getFilesDir() + "/" + "ImageData" + "/" + sideName + "_" + System.currentTimeMillis() + ".png");
-        imgCap.takePicture(file, new ImageCapture.OnImageSavedListener() {
-            @Override
-            public void onImageSaved(@NonNull File file) {
-                String msg = "Pic captured at " + file.getAbsolutePath();
-                Toast.makeText(getBaseContext(), msg, Toast.LENGTH_LONG).show();
-            }
+        final File savedPhoto = new File(Environment.getExternalStorageDirectory()+"/"+"ImageData" , sideName + "_" + System.currentTimeMillis() + ".png");
 
+        cameraKitView.captureImage(new CameraKitView.ImageCallback() {
             @Override
-            public void onError(@NonNull ImageCapture.UseCaseError useCaseError, @NonNull String message, @Nullable Throwable cause) {
-                String msg = "Pic capture failed : " + message;
-                Toast.makeText(getBaseContext(), msg, Toast.LENGTH_LONG).show();
-                if (cause != null) {
-                    cause.printStackTrace();
+            public void onImage(CameraKitView cameraKitView, final byte[] capturedImage) {
+                try {
+                    FileOutputStream outputStream = new FileOutputStream(savedPhoto.getPath());
+                    outputStream.write(capturedImage);
+                    outputStream.close();
+                    Toast.makeText(getApplicationContext(),"Image save to Imagedata directory",Toast.LENGTH_SHORT).show();
+                } catch (java.io.IOException e) {
+                    e.printStackTrace();
                 }
             }
         });
     }
 
 
-    private void updateTransform() {
-        Matrix mx = new Matrix();
-        float w = textureView.getMeasuredWidth();
-        float h = textureView.getMeasuredHeight();
-
-        float cX = w / 2f;
-        float cY = h / 2f;
-
-        int rotationDgr;
-        int rotation = (int) textureView.getRotation();
-
-        switch (rotation) {
-            case Surface.ROTATION_0:
-                rotationDgr = 0;
-                break;
-            case Surface.ROTATION_90:
-                rotationDgr = 90;
-                break;
-            case Surface.ROTATION_180:
-                rotationDgr = 180;
-                break;
-            case Surface.ROTATION_270:
-                rotationDgr = 270;
-                break;
-            default:
-                return;
-        }
-
-        mx.postRotate((float) rotationDgr, cX, cY);
-        textureView.setTransform(mx);
-    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -304,6 +212,7 @@ public class CameraActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        cameraKitView.onStart();
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction("com.example.cameracoordinator");
         registerReceiver(broadcastReceiver, intentFilter);
@@ -312,7 +221,16 @@ public class CameraActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
+        cameraKitView.onStop();
         unregisterReceiver(broadcastReceiver);
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        cameraKitView.onResume();
+    }
+
 }
+
 

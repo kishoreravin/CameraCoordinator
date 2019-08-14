@@ -5,14 +5,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".CameraActivity">
-    <TextureView
-        android:id="@+id/view_finder"
+
+    <com.camerakit.CameraKitView
+        android:id="@+id/camera"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:adjustViewBounds="true"
+        app:camera_facing="back"
+        app:camera_focus="auto"
+        app:camera_imageJpegQuality="100"
+        />
 
     <ImageButton
         android:id="@+id/imgCapture"
@@ -26,11 +28,15 @@
 
     <TextView
         android:id="@+id/size_tv"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="89dp"
+        android:layout_height="30dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
         android:text="250 x 250"
-        tools:layout_editor_absoluteX="294dp"
-        tools:layout_editor_absoluteY="37dp"
-        tools:ignore="MissingConstraints" />
+        app:layout_constraintBottom_toTopOf="@+id/imgCapture"
+        app:layout_constraintTop_toTopOf="@+id/camera"
+        app:layout_constraintVertical_bias="0.079"
+        tools:ignore="MissingConstraints"
+        tools:layout_editor_absoluteX="288dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
