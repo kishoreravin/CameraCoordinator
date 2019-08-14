@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -20,8 +21,7 @@ public class MainActivity extends AppCompatActivity {
     private Button GetReferalCode, StartCamera;
     private TextView ReferalCode;
     private EditText SideName, EnteredReferalCode;
-    private FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
-    private DatabaseReference referal_code = firebaseDatabase.getReference().child("referalCodes");
+
     private String referalCode, sideName, enteredReferalCode;
     private ImageButton GoButton;
 
@@ -52,18 +52,18 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 sideName = SideName.getText().toString().trim();
 
-                if (sideName != null && referalCode != null) {
+                if (!TextUtils.isEmpty(sideName) && EnteredReferalCode != null) {
                     Intent intent = new Intent(getBaseContext(), CameraActivity.class);
                     intent.putExtra("SideName", sideName);
-                    intent.putExtra("ReferalCode", referalCode);
+                    intent.putExtra("ReferalCode", enteredReferalCode);
                     startActivity(intent);
 
                 } else {
 
-                    if ((sideName == null)) {
+                    if (TextUtils.isEmpty(sideName)) {
                         SideName.setError("Enter Side Name");
                     } else {
-                        ReferalCode.setError("Enter Referal Code");
+                        EnteredReferalCode.setError("Enter Referal Code");
                     }
                 }
             }
@@ -74,19 +74,19 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 sideName = SideName.getText().toString().trim();
-                enteredReferalCode = EnteredReferalCode.getText().toString().trim();
+                enteredReferalCode = ReferalCode.getText().toString().trim();
 
-                if (sideName != null && enteredReferalCode != null) {
+                if (!TextUtils.isEmpty(sideName) && referalCode != null) {
                     Intent intent = new Intent(getBaseContext(), CameraActivity.class);
                     intent.putExtra("SideName", sideName);
-                    intent.putExtra("ReferalCode", enteredReferalCode);
+                    intent.putExtra("ReferalCode", referalCode);
                     startActivity(intent);
                 } else {
 
-                    if ((sideName == null)) {
+                    if (TextUtils.isEmpty(sideName)) {
                         SideName.setError("Enter Side Name");
                     } else {
-                        EnteredReferalCode.setError("Enter Referal Code");
+                        ReferalCode.setError("Enter Referal Code");
                     }
                 }
             }

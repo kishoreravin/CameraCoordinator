@@ -13,10 +13,15 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.lifecycle.LifecycleOwner;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Matrix;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.StrictMode;
 import android.util.Log;
 import android.util.Rational;
 import android.util.Size;
@@ -31,11 +36,14 @@ import com.android.volley.AuthFailureError;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -75,10 +83,25 @@ public class CameraActivity extends AppCompatActivity {
         this.width = width;
     }
 
+    BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            boolean rec = intent.getBooleanExtra("received", true);
+            if (rec) {
+                captureImage();
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
+
+        if (android.os.Build.VERSION.SDK_INT > 9) {
+            StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+            StrictMode.setThreadPolicy(policy);
+        }
 
         textureView = findViewById(R.id.view_finder);
         SizeTextView = findViewById(R.id.size_tv);
@@ -88,17 +111,30 @@ public class CameraActivity extends AppCompatActivity {
         referalCode = bundle.getString("ReferalCode");
 
 
+        FirebaseMessaging.getInstance().subscribeToTopic(referalCode)
+                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        String msg = "connected";
+                        if (!task.isSuccessful()) {
+                            msg = "Connection failed";
+                        }
+                        Log.d(TAG, msg);
+                        Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
+                    }
+                });
+
+
+        imageCaptureConfig = new ImageCaptureConfig.Builder().setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY)
+                .setTargetRotation(getWindowManager().getDefaultDisplay().getRotation()).build();
+        imgCap = new ImageCapture(imageCaptureConfig);
+
         //start camera if permission has been granted by user
         if (allPermissionsGranted()) {
             startCamera();
         } else {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
         }
-
-
-        imageCaptureConfig = new ImageCaptureConfig.Builder().setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY)
-                .setTargetRotation(getWindowManager().getDefaultDisplay().getRotation()).build();
-        imgCap = new ImageCapture(imageCaptureConfig);
 
 
     }
@@ -110,7 +146,7 @@ public class CameraActivity extends AppCompatActivity {
         SizeDialogFragment sizeDialogFragment = new SizeDialogFragment();
         sizeDialogFragment.show(getSupportFragmentManager(), "Enter Size");
 
-        SizeTextView.setText(height+" X "+width);
+        SizeTextView.setText(height + " X " + width);
 
         Rational aspectRatio = new Rational(textureView.getWidth(), textureView.getHeight());
         Size screen = new Size(width, height); //user entered size #Default => 250x250
@@ -147,10 +183,10 @@ public class CameraActivity extends AppCompatActivity {
                     notifcationBody.put("title", NOTIFICATION_TITLE);
                     notifcationBody.put("message", NOTIFICATION_MESSAGE);
 
-                    notification.put("to", TOPIC);
+                    notification.put("to", "topics/" + TOPIC);
                     notification.put("data", notifcationBody);
                 } catch (JSONException e) {
-                    Log.e(TAG, "onCreate: " + e.getMessage() );
+                    Log.e(TAG, "onCreate: " + e.getMessage());
                 }
                 sendNotification(notification);
             }
@@ -162,7 +198,7 @@ public class CameraActivity extends AppCompatActivity {
         CameraX.bindToLifecycle((LifecycleOwner) this, preview, imgCap);
     }
 
-    private void captureImage(ImageCapture imgCap) {
+    public void captureImage() {
         File file = new File(Environment.getExternalStorageDirectory() + "/" + "ImageData" + "/" + sideName + "_" + System.currentTimeMillis() + ".png");
         imgCap.takePicture(file, new ImageCapture.OnImageSavedListener() {
             @Override
@@ -253,7 +289,7 @@ public class CameraActivity extends AppCompatActivity {
                         Toast.makeText(getBaseContext(), "Request error", Toast.LENGTH_LONG).show();
                         Log.i(TAG, "onErrorResponse: Didn't work");
                     }
-                }){
+                }) {
             @Override
             public Map<String, String> getHeaders() throws AuthFailureError {
                 Map<String, String> params = new HashMap<>();
@@ -263,6 +299,20 @@ public class CameraActivity extends AppCompatActivity {
             }
         };
         MySingleton.getInstance(getApplicationContext()).addToRequestQueue(jsonObjectRequest);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction("com.example.cameracoordinator");
+        registerReceiver(broadcastReceiver, intentFilter);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(broadcastReceiver);
     }
 }
 

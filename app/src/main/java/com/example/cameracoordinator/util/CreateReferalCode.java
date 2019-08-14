@@ -13,10 +13,10 @@ public class CreateReferalCode {
         int asciiNumber2 = new Random().nextInt(27)+64;
 
         StringBuilder sb = new StringBuilder();
-        sb.append(first3Digits);
         sb.append((char)asciiNumber1);
+        sb.append(first3Digits);
+        sb.append("_");
         sb.append((char)asciiNumber2);
-        sb.append("@");
 
         return sb.toString();
     }

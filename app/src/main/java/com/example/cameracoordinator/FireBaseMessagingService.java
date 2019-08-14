@@ -28,9 +28,6 @@ public class FireBaseMessagingService extends FirebaseMessagingService {
 
     static String referalCode;
 
-    public static void setTopic(String topic) {
-        referalCode = topic;
-    }
 
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
@@ -68,6 +65,12 @@ public class FireBaseMessagingService extends FirebaseMessagingService {
             notificationBuilder.setColor(getResources().getColor(R.color.colorPrimaryDark));
         }
         notificationManager.notify(notificationID, notificationBuilder.build());
+
+        Intent intent1 = new Intent();
+        intent1.setAction("com.example.cameracoordinator");
+        intent1.putExtra("received",true);
+        sendBroadcast(intent1);
+
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -88,7 +91,7 @@ public class FireBaseMessagingService extends FirebaseMessagingService {
 
     @Override
     public void onNewToken(String s) {
-        FirebaseMessaging.getInstance().subscribeToTopic(referalCode);
+
         super.onNewToken(s);
     }
 }
